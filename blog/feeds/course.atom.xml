@@ -1,5 +1,558 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>2017Fall CADP&amp;CP (虎尾科大MDE) - Course</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/" rel="alternate"></link><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/feeds/course.atom.xml" rel="self"></link><id>https://s40523135.github.io/40523135_cadp_finalproject/blog/</id><updated>2018-01-10T23:33:00+08:00</updated><entry><title>2017 Fall CADP 電腦輔助設計實習期末個人簡報</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2018-fall-cadp-w5.html" rel="alternate"></link><published>2018-01-10T23:33:00+08:00</published><updated>2018-01-10T23:33:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-10:/40523135_cadp_finalproject/blog/2018-fall-cadp-w5.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末個人簡報issue&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>2017Fall CADP&amp;CP (虎尾科大MDE) - Course</title><link href="./" rel="alternate"></link><link href="./feeds/course.atom.xml" rel="self"></link><id>./</id><updated>2018-06-04T20:50:00+08:00</updated><entry><title>2018 協同產品設計齒輪練習</title><link href="./3.html" rel="alternate"></link><published>2018-06-04T20:50:00+08:00</published><updated>2018-06-04T20:50:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-06-04:./3.html</id><summary type="html"></summary><content type="html">&lt;!-- PELICAN_END_SUMMARY --&gt;
+
+&lt;!-- 導入 Brython 標準程式庫 --&gt;
+
+&lt;script src="../data/Brython-3.3.1/brython.js"&gt;&lt;/script&gt;
+
+&lt;script src="../data/Brython-3.3.1/brython_stdlib.js"&gt;&lt;/script&gt;
+
+&lt;!-- 啟動 Brython --&gt;
+
+&lt;script&gt;
+window.onload=function(){
+// 設定 data/py 為共用程式路徑
+brython({debug:1, pythonpath:['./../data/py']});
+}
+&lt;/script&gt;
+
+&lt;!-- 以下處理 Cango Spur Gear --&gt;
+
+&lt;!-- Cango 程式庫 --&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+/Cango-9v05-min.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+/CangoAxes-2v09.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+/CangoAnimation-5v00.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+/gearUtils-05.js"&gt;&lt;/script&gt;
+
+&lt;canvas id='cango_gear' width='1200' height='800'&gt;&lt;/canvas&gt;
+
+&lt;script type="text/python"&gt;
+# 將 導入的 document 設為 doc 主要原因在於與舊程式碼相容
+from browser import document as doc
+# 由於 Python3 與 Javascript 程式碼已經不再混用, 因此來自 Javascript 的變數, 必須居中透過 window 物件轉換
+from browser import window
+import math
+
+# 主要用來取得畫布大小
+canvas = doc["cango_gear"]
+# 此程式採用 Cango Javascript 程式庫繪圖, 因此無需 ctx
+ctx = canvas.getContext("2d")
+cango = window.Cango.new
+# 針對變數的轉換, shapeDefs 在 Cango 中資料型別為變數, 可以透過 window 轉換
+shapedefs = window.shapeDefs
+# 目前 Cango 結合 Animation 在 Brython 尚無法運作, 此刻只能繪製靜態圖形
+# in CangoAnimation.js
+#interpolate1 = window.interpolate
+# Cobi 與 createGearTooth 都是 Cango Javascript 程式庫中的物件
+#cobj = window.Cobj.new
+shape = window.Shape.new
+path = window.Path.new
+creategeartooth = window.createGearTooth.new
+
+tweener = window.Tweener.new
+# 經由 Cango 轉換成 Brython 的 cango, 指定將圖畫在 id="cango_gear" 的 canvas 上
+cgo = cango("cango_gear")
+
+######################################
+# 畫正齒輪輪廓
+#####################################
+def cangoGear(n, m, pa):
+    # n 為齒數
+    #n = 17
+    # pa 為壓力角
+    #pa = 25
+    # m 為模數, 根據畫布的寬度, 計算適合的模數大小
+    # Module = mm of pitch diameter per tooth
+    #m = 0.8*canvas.width/n
+    # pr 為節圓半徑
+    pr = n*m/2 # gear Pitch radius
+    # generate gear
+    data = creategeartooth(m, n, pa)
+    # Brython 程式中的 print 會將資料印在 Browser 的 console 區
+    #print(data)
+    gearTooth = shape(data, {
+      "fillColor":"#ddd0dd",
+      "border": True,
+      "strokeColor": "#606060" })
+    gearTooth.rotate(180/n) # rotate gear 1/2 tooth to mesh
+    # 單齒的齒形資料經過旋轉後, 將資料複製到 gear 物件中
+    gear = gearTooth.dup()
+    # gear 為單一齒的輪廓資料
+    #cgo.render(gearTooth)
+
+    # 利用單齒輪廓旋轉, 產生整個正齒輪外形
+    for i in range(1, n):
+        # 將 gearTooth 中的資料複製到 newTooth
+        newTooth = gearTooth.dup()
+        # 配合迴圈, newTooth 的齒形資料進行旋轉, 然後利用 appendPath 方法, 將資料併入 gear
+        newTooth.rotate(360*i/n)
+        # appendPath 為 Cango 程式庫中的方法, 第二個變數為 True, 表示要刪除最前頭的 Move to SVG Path 標註符號
+        gear.appendPath(newTooth, True) # trim move command = True
+
+    # 建立軸孔
+    # add axle hole, hr 為 hole radius
+    hr = 0.6*pr # diameter of gear shaft
+    shaft = path(shapedefs.circle(hr))
+    shaft.revWinding()
+    gear.appendPath(shaft) # retain the 'moveTo' command for shaft sub path
+
+    # setup the animation
+    # backlash (mm)
+    bklsh = 0.04*m
+    # centre shift to make backlash
+    dC = bklsh/(2*math.tan(math.pi*pa/180))
+    # np 為小齒輪齒數
+    np = 20
+    # gear ratio
+    gr = n/np              
+    gearConfig = {'cx':-pr, 'cy':0, 'degs':[0, 360]}
+    # gr*0.666 rpm
+    #pinionConfig = {'cx':pr+dC, 'cy':0, 'degs':[0, -gr*360]}
+    # 0.666 rpm
+    # 目前並非以 tweener 執行動畫
+    #twnr = tweener(0, 90000, "loop")
+    return gear
+
+# 設定兩齒齒數
+n = 10
+n2 = 10
+reduced_ratio = 0.5
+# 使用 80% 的畫布寬度
+m = 0.5*canvas.width/((n+n2)*reduced_ratio)
+# 設定共同的壓力角
+pa = 25
+# n 齒輪的節圓半徑
+pr = n*m/2
+# n2 齒輪的節圓半徑
+pr2 = n2*m/2
+# 建立 gear
+gear = cangoGear(n, m, pa)
+cx = canvas.width/2
+cy = canvas.height/2
+#gear.translate(cx, cy)
+# render 繪出靜態正齒輪輪廓
+#cgo.render(gear)
+# 利用 gear 資料複製一份, 命名為 gear1
+#gear1 = gear.dup()
+# 建立 gear1
+gear1 = cangoGear(n2, m, pa)
+
+
+from time import time
+from browser.timer import request_animation_frame as raf
+from browser.timer import set_interval
+
+deg = math.pi/180
+
+def draw():
+    cgo.clearCanvas()
+    gear.rotate(2*deg)
+    # 在特定位置, 以特定 scale, 特定 degs 執行 render
+    # 設定囓合點在畫布正中央
+    # 囓合點往左偏 pr/2 即為 n 齒輪的圓心 x 座標
+    #cgo.render(gear, {'x':cx-pr*reduced_ratio, 'y':cy, 'scl':reduced_ratio, 'degs':0})
+    cgo.render(gear, {'x':cx-(pr+pr2)*reduced_ratio, 'y':cy, 'scl':0.5, 'degs':0})
+    # 根據兩齒輪齒數比決定 n2 齒輪轉速
+    gear1.rotate(-2*deg*n/n2)
+    # 囓合點往右偏 pr2/2 即為 n2 齒輪的圓心 x 座標, 且 n2 齒轉 180 加一齒角度後囓合
+    cgo.render(gear1, {'x':cx, 'y':cy, 'scl':reduced_ratio, 'degs':180+(360/n2/2)})
+
+set_interval(draw, 2)
+&lt;/script&gt;</content><category term="cd2018"></category></entry><entry><title>2018 協同產品設計齒輪練習</title><link href="./2.html" rel="alternate"></link><published>2018-06-04T20:40:00+08:00</published><updated>2018-06-04T20:40:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-06-04:./2.html</id><summary type="html"></summary><content type="html">&lt;!-- PELICAN_END_SUMMARY --&gt;
+
+&lt;p&gt;50t 與 25t 的齒輪嚙合靜態輪廓圖&lt;/p&gt;
+&lt;script type="text/javascript" src="https://brython.info/src/brython_dist.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/Cango-8v03.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/Cango2D-7v01-min.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/gearUtils-05.js"&gt;&lt;/script&gt;
+
+&lt;script&gt;
+window.onload=function(){
+brython(1);
+}
+&lt;/script&gt;
+
+&lt;canvas id='gear1' width='800' height='750'&gt;&lt;/canvas&gt;
+
+&lt;script type="text/python"&gt;
+# 將 導入的 document 設為 doc 主要原因在於與舊程式碼相容
+from browser import document as doc
+# 由於 Python3 與 Javascript 程式碼已經不再混用, 因此來自 Javascript 的變數, 必須居中透過 window 物件轉換
+from browser import window
+# 針對 Javascript 既有的物件, 則必須透過 JSConstructor 轉換
+from javascript import JSConstructor
+import math
+
+# 主要用來取得畫布大小
+canvas = doc["gear1"]
+# 此程式採用 Cango Javascript 程式庫繪圖, 因此無需 ctx
+#ctx = canvas.getContext("2d")
+# 針對類別的轉換, 將 Cango.js 中的 Cango 物件轉為 Python cango 物件
+cango = JSConstructor(window.Cango)
+# 針對變數的轉換, shapeDefs 在 Cango 中資料型別為變數, 可以透過 window 轉換
+shapedefs = window.shapeDefs
+# 目前 Cango 結合 Animation 在 Brython 尚無法運作, 此刻只能繪製靜態圖形
+# in CangoAnimation.js
+#interpolate1 = window.interpolate
+# Cobi 與 createGearTooth 都是 Cango Javascript 程式庫中的物件
+cobj = JSConstructor(window.Cobj)
+creategeartooth = JSConstructor(window.createGearTooth)
+
+# 經由 Cango 轉換成 Brython 的 cango, 指定將圖畫在 id="plotarea" 的 canvas 上
+cgo = cango("gear1")
+
+######################################
+# 畫正齒輪輪廓
+#####################################
+def spur(cx, cy, m, n, pa, theta):
+    # n 為齒數
+    #n = 50
+    # pa 為壓力角
+    #pa = 25
+    # m 為模數, 根據畫布的寬度, 計算適合的模數大小
+    # Module = mm of pitch diameter per tooth
+    #m = 0.8*canvas.width/n
+    # pr 為節圓半徑
+    pr = n*m/2 # gear Pitch radius
+    # generate gear
+    data = creategeartooth(m, n, pa)
+    # Brython 程式中的 print 會將資料印在 Browser 的 console 區
+    #print(data)
+
+    gearTooth = cobj(data, "SHAPE", {
+            "fillColor":"#ddd0dd",
+            "border": True,
+            "strokeColor": "#606060" })
+    #gearTooth.rotate(180/n) # rotate gear 1/2 tooth to mesh, 請注意 rotate 角度為 degree
+    # theta 為角度
+    gearTooth.rotate(theta) 
+    # 單齒的齒形資料經過旋轉後, 將資料複製到 gear 物件中
+    gear = gearTooth.dup()
+    # gear 為單一齒的輪廓資料
+    #cgo.render(gearTooth)
+
+    # 利用單齒輪廓旋轉, 產生整個正齒輪外形
+    for i in range(1, n):
+        # 將 gearTooth 中的資料複製到 newTooth
+        newTooth = gearTooth.dup()
+        # 配合迴圈, newTooth 的齒形資料進行旋轉, 然後利用 appendPath 方法, 將資料併入 gear
+        newTooth.rotate(360*i/n)
+        # appendPath 為 Cango 程式庫中的方法, 第二個變數為 True, 表示要刪除最前頭的 Move to SVG Path 標註符號
+        gear.appendPath(newTooth, True) # trim move command = True
+
+    # 建立軸孔
+    # add axle hole, hr 為 hole radius
+    hr = 0.6*pr # diameter of gear shaft
+    shaft = cobj(shapedefs.circle(hr), "PATH")
+    shaft.revWinding()
+    gear.appendPath(shaft) # retain the 'moveTo' command for shaft sub path
+    gear.translate(cx, cy)
+    # render 繪出靜態正齒輪輪廓
+    cgo.render(gear)
+    # 接著繪製齒輪的基準線
+    deg = math.pi/180
+    Line = cobj(['M', cx, cy, 'L', cx+pr*math.cos(theta*deg), cy+pr*math.sin(theta*deg)], "PATH", {
+          'strokeColor':'blue', 'lineWidth': 1})
+    cgo.render(Line)
+
+# 3個齒輪的齒數
+n1 = 50
+n2 = 25
+
+
+# m 為模數, 根據畫布的寬度, 計算適合的模數大小
+# Module = mm of pitch diameter per tooth
+# 利用 80% 的畫布寬度進行繪圖
+# 計算模數的對應尺寸
+m = canvas.width*0.8/(n1+n2)
+
+# 根據齒數與模組計算各齒輪的節圓半徑
+pr1 = n1*m/2
+pr2 = n2*m/2
+
+
+# 畫布左右兩側都保留畫布寬度的 10%
+# 依此計算對應的最左邊齒輪的軸心座標
+cx = canvas.width*0.1+pr1
+cy = canvas.height/2
+
+# pa 為壓力角
+pa = 25
+
+# 畫最左邊齒輪, 定位線旋轉角為 0, 軸心座標 (cx, cy)
+spur(cx, cy, m, n1, pa, 0)
+# 第2個齒輪將原始的定位線逆時鐘轉 180 度後, 與第1個齒輪正好齒頂與齒頂對齊
+# 只要第2個齒輪再逆時鐘或順時鐘轉動半齒的角度, 即可完成囓合
+# 每一個齒分別包括從齒根到齒頂的範圍, 涵蓋角度為 360/n, 因此所謂的半齒角度為 180/n
+spur(cx+pr1+pr2, cy, m, n2, pa, 180-180/n2)
+# 第2齒與第3齒的囓合, 首先假定第2齒的定位線在 theta 角為 0 的原始位置
+# 如此, 第3齒只要逆時鐘旋轉 180 度後, 再逆時鐘或順時鐘轉動半齒的角度, 即可與第2齒囓合
+# 但是第2齒為了與第一齒囓合時, 已經從原始定位線轉了 180-180/n2 度
+# 而當第2齒從與第3齒囓合的定位線, 逆時鐘旋轉 180-180/n2 角度後, 原先囓合的第3齒必須要再配合旋轉 (180-180/n2 )*n2/n3
+&lt;/script&gt;</content><category term="cd2018"></category></entry><entry><title>2018 協同產品設計齒輪練習</title><link href="./1.html" rel="alternate"></link><published>2018-06-04T20:32:00+08:00</published><updated>2018-06-04T20:32:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-06-04:./1.html</id><summary type="html"></summary><content type="html">&lt;!-- PELICAN_END_SUMMARY --&gt;
+
+&lt;p&gt;網際齒輪練習
+&lt;script type="text/javascript" src="https://brython.info/src/brython_dist.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/Cango-8v03.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/Cango2D-7v01-min.js"&gt;&lt;/script&gt;
+&lt;script type="text/javascript" src="https://2015fallhw.github.io/cptocadp/static/gearUtils-05.js"&gt;&lt;/script&gt;&lt;/p&gt;
+&lt;h2&gt;利用漸開線原理, 以 Brython 繪製單一正齒輪廓:21齒&lt;/h2&gt;
+&lt;!-- 導入 Brython 標準程式庫 --&gt;
+
+&lt;script src="../data/Brython-3.3.1/brython.js"&gt;&lt;/script&gt;
+
+&lt;script src="../data/Brython-3.3.1/brython_stdlib.js"&gt;&lt;/script&gt;
+
+&lt;!-- 啟動 Brython --&gt;
+
+&lt;script&gt;
+window.onload=function(){
+// 設定 data/py 為共用程式路徑
+brython({debug:1, pythonpath:['./../data/py']});
+}
+&lt;/script&gt;
+
+&lt;!-- 以下實際利用  Brython 繪圖--&gt;
+
+&lt;canvas id="onegear" width="800" height="600"&gt;&lt;/canvas&gt;
+
+&lt;div id="onegear_div" width="800" height="20"&gt;&lt;/div&gt;
+
+&lt;script type="text/python3"&gt;
+from browser import document as doc
+import math
+# deg 為角度轉為徑度的轉換因子
+deg = math.pi/180.
+# 定義 Spur 類別
+class Spur(object):
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def create_line(self, x1, y1, x2, y2, width=3, fill="red"):
+        self.ctx.beginPath()
+        self.ctx.lineWidth = width
+        self.ctx.moveTo(x1, y1)
+        self.ctx.lineTo(x2, y2)
+        self.ctx.strokeStyle = fill
+        self.ctx.stroke()
+    #
+    # 定義一個繪正齒輪的繪圖函式
+    # midx 為齒輪圓心 x 座標
+    # midy 為齒輪圓心 y 座標
+    # rp 為節圓半徑, n 為齒數
+    # pa 為壓力角 (deg)
+    # rot 為旋轉角 (deg)
+    # 已經針對 n 大於等於 52 齒時的繪圖錯誤修正, 因為 base circle 與齒根圓大小必須進行判斷
+    def Gear(self, midx, midy, rp, n=20, pa=20, color="black"):
+        # 齒輪漸開線分成 15 線段繪製
+        imax = 15
+        # 在輸入的畫布上繪製直線, 由圓心到節圓 y 軸頂點畫一直線
+        self.create_line(midx, midy, midx, midy-rp)
+        # 畫出 rp 圓, 畫圓函式尚未定義
+        #create_oval(midx-rp, midy-rp, midx+rp, midy+rp, width=2)
+        # a 為模數 (代表公制中齒的大小), 模數為節圓直徑(稱為節徑)除以齒數
+        # 模數也就是齒冠大小
+        a=2*rp/n
+        # d 為齒根大小, 為模數的 1.157 或 1.25倍, 這裡採 1.25 倍
+        d=2.5*rp/n
+        # ra 為齒輪的外圍半徑
+        ra=rp+a
+        # 畫出 ra 圓, 畫圓函式尚未定義
+        #create_oval(midx-ra, midy-ra, midx+ra, midy+ra, width=1)
+        # rb 則為齒輪的基圓半徑
+        # 基圓為漸開線長齒之基準圓
+        rb=rp*math.cos(pa*deg)
+        # 畫出 rb 圓 (基圓), 畫圓函式尚未定義
+        #create_oval(midx-rb, midy-rb, midx+rb, midy+rb, width=1)
+        # rd 為齒根圓半徑
+        rd=rp-d
+        # 當 rd 大於 rb 時, 漸開線並非畫至 rb, 而是 rd
+        # 畫出 rd 圓 (齒根圓), 畫圓函式尚未定義
+        #create_oval(midx-rd, midy-rd, midx+rd, midy+rd, width=1)
+        # dr 則為基圓到齒頂圓半徑分成 imax 段後的每段半徑增量大小
+        # 將圓弧分成 imax 段來繪製漸開線
+        # 當 rd 大於 rb 時, 漸開線並非畫至 rb, 而是 rd
+        if rd&gt;rb:
+            dr = (ra-rd)/imax
+        else:
+            dr=(ra-rb)/imax
+        # tan(pa*deg)-pa*deg 為漸開線函數
+        sigma=math.pi/(2*n)+math.tan(pa*deg)-pa*deg
+        for j in range(n):
+            ang=-2.*j*math.pi/n+sigma
+            ang2=2.*j*math.pi/n+sigma
+            lxd=midx+rd*math.sin(ang2-2.*math.pi/n)
+            lyd=midy-rd*math.cos(ang2-2.*math.pi/n)
+            for i in range(imax+1):
+                # 當 rd 大於 rb 時, 漸開線並非畫至 rb, 而是 rd
+                if rd&gt;rb:
+                    r=rd+i*dr
+                else:
+                    r=rb+i*dr
+                theta=math.sqrt((r*r)/(rb*rb)-1.)
+                alpha=theta-math.atan(theta)
+                xpt=r*math.sin(alpha-ang)
+                ypt=r*math.cos(alpha-ang)
+                xd=rd*math.sin(-ang)
+                yd=rd*math.cos(-ang)
+                # i=0 時, 繪線起點由齒根圓上的點, 作為起點
+                if(i==0):
+                    last_x = midx+xd
+                    last_y = midy-yd
+                # 由左側齒根圓作為起點, 除第一點 (xd,yd) 齒根圓上的起點外, 其餘的 (xpt,ypt)則為漸開線上的分段點
+                self.create_line((midx+xpt),(midy-ypt),(last_x),(last_y),fill=color)
+                # 最後一點, 則為齒頂圓
+                if(i==imax):
+                    lfx=midx+xpt
+                    lfy=midy-ypt
+                last_x = midx+xpt
+                last_y = midy-ypt
+            # the line from last end of dedendum point to the recent
+            # end of dedendum point
+            # lxd 為齒根圓上的左側 x 座標, lyd 則為 y 座標
+            # 下列為齒根圓上用來近似圓弧的直線
+            self.create_line((lxd),(lyd),(midx+xd),(midy-yd),fill=color)
+            for i in range(imax+1):
+                # 當 rd 大於 rb 時, 漸開線並非畫至 rb, 而是 rd
+                if rd&gt;rb:
+                    r=rd+i*dr
+                else:
+                    r=rb+i*dr
+                theta=math.sqrt((r*r)/(rb*rb)-1.)
+                alpha=theta-math.atan(theta)
+                xpt=r*math.sin(ang2-alpha)
+                ypt=r*math.cos(ang2-alpha)
+                xd=rd*math.sin(ang2)
+                yd=rd*math.cos(ang2)
+                # i=0 時, 繪線起點由齒根圓上的點, 作為起點
+                if(i==0):
+                    last_x = midx+xd
+                    last_y = midy-yd
+                # 由右側齒根圓作為起點, 除第一點 (xd,yd) 齒根圓上的起點外, 其餘的 (xpt,ypt)則為漸開線上的分段點
+                self.create_line((midx+xpt),(midy-ypt),(last_x),(last_y),fill=color)
+                # 最後一點, 則為齒頂圓
+                if(i==imax):
+                    rfx=midx+xpt
+                    rfy=midy-ypt
+                last_x = midx+xpt
+                last_y = midy-ypt
+            # lfx 為齒頂圓上的左側 x 座標, lfy 則為 y 座標
+            # 下列為齒頂圓上用來近似圓弧的直線
+            self.create_line(lfx,lfy,rfx,rfy,fill=color)
+canvas = doc['onegear']
+ctx = canvas.getContext("2d")
+x = (canvas.width)/2
+y = (canvas.height)/2
+r = 0.8*(canvas.height/2)
+# 齒數
+n = 21
+# 壓力角
+pa = 20
+Spur(ctx).Gear(x, y, r, n, pa, "blue")
+&lt;/script&gt;
+
+&lt;!-- 以下處理 Cango Spur Gear --&gt;
+
+&lt;!-- Cango 程式庫 --&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+_old/Cango-8v03.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+_old/Cango2D-7v01-min.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+_old/CangoAxes-1v33.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+_old/CangoAnimation-4v01.js"&gt;&lt;/script&gt;
+
+&lt;script type="text/javascript" src="./../data/w11/cango
+_old/gearUtils-05.js"&gt;&lt;/script&gt;
+
+&lt;canvas id='cango_gear' width='800' height='750'&gt;&lt;/canvas&gt;
+
+&lt;script type="text/python"&gt;
+# 將 導入的 document 設為 doc 主要原因在於與舊程式碼相容
+from browser import document as doc
+# 由於 Python3 與 Javascript 程式碼已經不再混用, 因此來自 Javascript 的變數, 必須居中透過 window 物件轉換
+from browser import window
+import math
+
+# 主要用來取得畫布大小
+canvas = doc["cango_gear"]
+# 此程式採用 Cango Javascript 程式庫繪圖, 因此無需 ctx
+#ctx = canvas.getContext("2d")
+cango = window.Cango.new
+# 針對變數的轉換, shapeDefs 在 Cango 中資料型別為變數, 可以透過 window 轉換
+shapedefs = window.shapeDefs
+# 目前 Cango 結合 Animation 在 Brython 尚無法運作, 此刻只能繪製靜態圖形
+# in CangoAnimation.js
+#interpolate1 = window.interpolate
+# Cobi 與 createGearTooth 都是 Cango Javascript 程式庫中的物件
+cobj = window.Cobj.new
+creategeartooth = window.createGearTooth.new
+# 經由 Cango 轉換成 Brython 的 cango, 指定將圖畫在 id="cango_gear" 的 canvas 上
+cgo = cango("cango_gear")
+
+######################################
+# 畫正齒輪輪廓
+#####################################
+# n 為齒數
+n = 11
+# pa 為壓力角
+pa = 25
+# m 為模數, 根據畫布的寬度, 計算適合的模數大小
+# Module = mm of pitch diameter per tooth
+m = 0.8*canvas.width/n
+# pr 為節圓半徑
+pr = n*m/2 # gear Pitch radius
+# generate gear
+data = creategeartooth(m, n, pa)
+# Brython 程式中的 print 會將資料印在 Browser 的 console 區
+#print(data)
+gearTooth = cobj(data, "SHAPE", {
+        "fillColor":"#ddd0dd",
+        "border": True,
+        "strokeColor": "#606060" })
+gearTooth.rotate(180/n) # rotate gear 1/2 tooth to mesh
+# 單齒的齒形資料經過旋轉後, 將資料複製到 gear 物件中
+gear = gearTooth.dup()
+# gear 為單一齒的輪廓資料
+#cgo.render(gearTooth)
+
+# 利用單齒輪廓旋轉, 產生整個正齒輪外形
+for i in range(1, n):
+    # 將 gearTooth 中的資料複製到 newTooth
+    newTooth = gearTooth.dup()
+    # 配合迴圈, newTooth 的齒形資料進行旋轉, 然後利用 appendPath 方法, 將資料併入 gear
+    newTooth.rotate(360*i/n)
+    # appendPath 為 Cango 程式庫中的方法, 第二個變數為 True, 表示要刪除最前頭的 Move to SVG Path 標註符號
+    gear.appendPath(newTooth, True) # trim move command = True
+
+# 建立軸孔
+# add axle hole, hr 為 hole radius
+hr = 0.6*pr # diameter of gear shaft
+shaft = cobj(shapedefs.circle(hr), "PATH")
+shaft.revWinding()
+gear.appendPath(shaft) # retain the 'moveTo' command for shaft sub path
+cx = canvas.width/2
+cy = canvas.height/2
+gear.translate(cx, cy)
+# render 繪出靜態正齒輪輪廓
+cgo.render(gear)
+&lt;/script&gt;</content><category term="cd2018"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習期末個人簡報</title><link href="./2018-fall-cadp-w5.html" rel="alternate"></link><published>2018-01-10T23:33:00+08:00</published><updated>2018-01-10T23:33:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-10:./2018-fall-cadp-w5.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末個人簡報issue&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習期末個人簡報issue&lt;/p&gt;
 
 
@@ -7,18 +560,18 @@
 個人簡報影片:[https://youtu.be/qLwSXiqCDuA]
 分組報告:
 第6 組 - [https://github.com/s40523125/ag6_cadp_finalproject/blob/gh-pages/report/latex/pdf/report.pdf]
-個人課程心得:在這門課我學會了如何使用電腦軟體去實體設計一個東西，設計并不是隨便畫個圖就可以做好的。從一開始solvespace中設計提球機構的初步模型，到onshape中畫出機構，到把機構放入vrep中進行模擬。都會遇到許多實際操作中的問題，也學會了在遇到問題的時候去思考或者詢問他人如何解決之類的問題。雖然最後機構模擬完成后時間太緊失去了3D列印機構的機會，但是之後會抓緊這類的機會去實做一下。也會把遇到的問題記錄下來。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習期末個人驗收</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2018-fall-cadp-w4.html" rel="alternate"></link><published>2018-01-10T23:31:00+08:00</published><updated>2018-01-10T23:31:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-10:/40523135_cadp_finalproject/blog/2018-fall-cadp-w4.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末個人驗收issue&lt;/p&gt;
+個人課程心得:在這門課我學會了如何使用電腦軟體去實體設計一個東西，設計并不是隨便畫個圖就可以做好的。從一開始solvespace中設計提球機構的初步模型，到onshape中畫出機構，到把機構放入vrep中進行模擬。都會遇到許多實際操作中的問題，也學會了在遇到問題的時候去思考或者詢問他人如何解決之類的問題。雖然最後機構模擬完成后時間太緊失去了3D列印機構的機會，但是之後會抓緊這類的機會去實做一下。也會把遇到的問題記錄下來。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習期末個人驗收</title><link href="./2018-fall-cadp-w4.html" rel="alternate"></link><published>2018-01-10T23:31:00+08:00</published><updated>2018-01-10T23:31:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-10:./2018-fall-cadp-w4.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末個人驗收issue&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習期末個人驗收issue&lt;/p&gt;
 
 
 &lt;p&gt;學號: 40523135
 個人驗收影片: [https://youtu.be/ZR_bR-pMbC8]
-個人心得: 模擬的時候要把物體的干涉和動力打開，設置軸的時候要整理好零件之間的關係（類似樹枝網路）但是我還是不會如何將底下的軸設置為彈簧，讓他可以把落下來的小球彈上去。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第16周</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2018-fall-cadp-w3.html" rel="alternate"></link><published>2018-01-10T12:57:00+08:00</published><updated>2018-01-10T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-10:/40523135_cadp_finalproject/blog/2018-fall-cadp-w3.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第16周學習彈珠機模擬的視頻&lt;/p&gt;
+個人心得: 模擬的時候要把物體的干涉和動力打開，設置軸的時候要整理好零件之間的關係（類似樹枝網路）但是我還是不會如何將底下的軸設置為彈簧，讓他可以把落下來的小球彈上去。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第16周</title><link href="./2018-fall-cadp-w3.html" rel="alternate"></link><published>2018-01-10T12:57:00+08:00</published><updated>2018-01-10T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-10:./2018-fall-cadp-w3.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第16周學習彈珠機模擬的視頻&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第16周學習彈珠機模擬的視頻&lt;/p&gt;
 
 
 &lt;p&gt;這是我設計的彈珠機模擬的視頻&lt;/p&gt;
-&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/ZR_bR-pMbC8" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人ONSHAPE分配任務</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w17.html" rel="alternate"></link><published>2018-01-09T21:07:00+08:00</published><updated>2018-01-09T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-09:/40523135_cadp_finalproject/blog/2017-fall-cadp-w17.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習學習onshape的視頻&lt;/p&gt;
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/ZR_bR-pMbC8" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人ONSHAPE分配任務</title><link href="./2017-fall-cadp-w17.html" rel="alternate"></link><published>2018-01-09T21:07:00+08:00</published><updated>2018-01-09T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-09:./2017-fall-cadp-w17.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習學習onshape的視頻&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習學習onshape的視頻&lt;/p&gt;
 
 
@@ -29,7 +582,7 @@
 
 &lt;p&gt;2.文件導入
 點擊導入按鈕，選擇你要導入的文件然後點擊上傳，再選擇尺寸就好了&lt;/p&gt;
-&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/0CNGD7ENZKo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習期末總結</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2018-fall-cadp-w2.html" rel="alternate"></link><published>2018-01-06T21:48:00+08:00</published><updated>2018-01-06T21:48:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-06:/40523135_cadp_finalproject/blog/2018-fall-cadp-w2.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末總結&lt;/p&gt;
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/0CNGD7ENZKo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習期末總結</title><link href="./2018-fall-cadp-w2.html" rel="alternate"></link><published>2018-01-06T21:48:00+08:00</published><updated>2018-01-06T21:48:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-06:./2018-fall-cadp-w2.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習期末總結&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習期末總結&lt;/p&gt;
 
 
@@ -47,7 +600,7 @@ onshape可以在雲端進行繪圖無需在電腦中安裝繪圖軟體衹要有�
 &lt;iframe width="560" height="315" src="https://www.youtube.com/embed/qLwSXiqCDuA" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;
 
 &lt;p&gt;這是我的小組機構的模擬視頻&lt;/p&gt;
-&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/_meTOM-f-Yo" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第15周學習心得</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2018-fall-cadp-w1.html" rel="alternate"></link><published>2018-01-01T21:43:00+08:00</published><updated>2018-01-01T21:43:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2018-01-01:/40523135_cadp_finalproject/blog/2018-fall-cadp-w1.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第15週&lt;/p&gt;
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/_meTOM-f-Yo" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第15周學習心得</title><link href="./2018-fall-cadp-w1.html" rel="alternate"></link><published>2018-01-01T21:43:00+08:00</published><updated>2018-01-01T21:43:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2018-01-01:./2018-fall-cadp-w1.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第15週&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第15週&lt;/p&gt;
 
 
@@ -57,20 +610,20 @@ onshape可以在雲端進行繪圖無需在電腦中安裝繪圖軟體衹要有�
 階梯式的機構靈感也是來源於youtube視頻[https://www.youtube.com/watch?v=2I_3mFmrU4A&amp;amp;t=47s]
 選擇馬達帶動底部凸輪結構，再通過凸輪的往復運動來達到階梯上下交錯的功能。
 所以想好之後就開始畫圖，我們組使用的軟體是soildworks，因爲他的功能比較强大可以在機構組合完成后製作動畫，而且它會考慮工件之間的干涉。衹要把馬達參數設定完成后，你的機構就會開始活動起來，可以看到初步的效果。
-soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/O0HnqLvj8Qw" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第13周學習心得</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w13.html" rel="alternate"></link><published>2017-12-22T21:45:00+08:00</published><updated>2017-12-22T21:45:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-12-22:/40523135_cadp_finalproject/blog/2017-fall-cadp-w13.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第13週&lt;/p&gt;
+soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/O0HnqLvj8Qw" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第13周學習心得</title><link href="./2017-fall-cadp-w13.html" rel="alternate"></link><published>2017-12-22T21:45:00+08:00</published><updated>2017-12-22T21:45:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-12-22:./2017-fall-cadp-w13.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第13週&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第13週&lt;/p&gt;
 
 
 &lt;p&gt;小組在機構綫結構的模擬上出現了一個難題 就是我們的機構需要在左邊的桿件到達頂端的時候與
 中間桿件上的一根柱子做干涉碰撞，要達到這個效果十分的困難。在solvespeace和onshape中都沒有
-這個干涉碰撞的選項，導致我們的機構目前都達不到我們理想的效果。沒法實現我們機構的製作。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第12周學習心得</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w12.html" rel="alternate"></link><published>2017-12-15T21:07:00+08:00</published><updated>2017-12-15T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-12-15:/40523135_cadp_finalproject/blog/2017-fall-cadp-w12.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第12週&lt;/p&gt;
+這個干涉碰撞的選項，導致我們的機構目前都達不到我們理想的效果。沒法實現我們機構的製作。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第12周學習心得</title><link href="./2017-fall-cadp-w12.html" rel="alternate"></link><published>2017-12-15T21:07:00+08:00</published><updated>2017-12-15T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-12-15:./2017-fall-cadp-w12.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第12週&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第12週&lt;/p&gt;
 
 
 &lt;p&gt;期中考試過後就開始設計小組的升球機構，小組經過討論過後決定采用一種豎直的階梯結構
 通過左右階梯的上下搖擺來使小球從地處被運送至高處。
 小組的靈感來自於youtube上有關marble machine的一個視頻
-所以我們決定先在solves peace上先畫出綫的結構然後再設計主要機構以及運球軌道。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第11周</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w11.html" rel="alternate"></link><published>2017-11-24T12:57:00+08:00</published><updated>2017-11-24T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-11-24:/40523135_cadp_finalproject/blog/2017-fall-cadp-w11.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第11周小組機構設計要求&lt;/p&gt;
+所以我們決定先在solves peace上先畫出綫的結構然後再設計主要機構以及運球軌道。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第11周</title><link href="./2017-fall-cadp-w11.html" rel="alternate"></link><published>2017-11-24T12:57:00+08:00</published><updated>2017-11-24T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-11-24:./2017-fall-cadp-w11.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第11周小組機構設計要求&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第11周小組機構設計要求&lt;/p&gt;
 
 
@@ -79,12 +632,12 @@ soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://
 &lt;p&gt;各組所完成的"機電資整合鋼球運動系統", 必須包含一個主要的鋼球運送機構模組 (以下稱為主模組), 並且能夠納入各學員所完成的軌道機構模組 (以下稱為軌道模組), 進行循環運動, 且整體系統的尺寸必須能夠放入郵局 Box2 紙箱中(規格: 23×18×19(cm).&lt;/p&gt;
 &lt;p&gt;當各組開始啟動"機電資整合鋼球運動系統"專題製作時, 各學員必須將所有細節紀錄在 二甲 與 二乙 所分配到的 Fossil SCM 伺服器主機中, 且各學員在近端隨身碟必須自行保全所有與專題相關的資料, 專題完成後, 再將各學員的 Fossil SCM 倉儲同步到 Github 倉儲.&lt;/p&gt;
 &lt;p&gt;各班依照座位, 前後三人共六人為一小組, 必須完成一套主模組設計, 各學員則分別提供一組軌道模組配合, 進行循環運動模擬. 第十三週起則每三小組合併成一大組, 根據學員投票決定實作一組主模組, 各學員則必須實作一組軌道系統與主模組配合運作.&lt;/p&gt;
-&lt;p&gt;最後各大組以協同方式完成電腦輔助設計實習報告, 各學員則根據所參與內容, 完成個人期末報告, 分別以 Reveal.js 網際簡報、Pelican 網誌、Vimeo 與 Youtube 影片呈現.&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第10周</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w10.html" rel="alternate"></link><published>2017-11-18T12:57:00+08:00</published><updated>2017-11-18T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-11-18:/40523135_cadp_finalproject/blog/2017-fall-cadp-w10.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第10周小組機構設計可用軟件&lt;/p&gt;
+&lt;p&gt;最後各大組以協同方式完成電腦輔助設計實習報告, 各學員則根據所參與內容, 完成個人期末報告, 分別以 Reveal.js 網際簡報、Pelican 網誌、Vimeo 與 Youtube 影片呈現.&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人第10周</title><link href="./2017-fall-cadp-w10.html" rel="alternate"></link><published>2017-11-18T12:57:00+08:00</published><updated>2017-11-18T12:57:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-11-18:./2017-fall-cadp-w10.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第10周小組機構設計可用軟件&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第10周小組機構設計可用軟件&lt;/p&gt;
 
 
 &lt;p&gt;期中過後就要開始設計小組的提球機構，我們可以使用soildworks，autodesk，ptc creo，等軟體來輔助我們設計機構。這些正版軟體我們可以從教室電腦進行下載.相關内容可以在老師fossil裏找到[https://mde1a1.kmol.info/2017fall/index]&lt;/p&gt;
-&lt;p&gt;而且每周四的晚上7.30到9.30在電腦輔助設計教室會有助教幫忙解決問題。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人ONSHAPE分配任務第9周任務</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w9.html" rel="alternate"></link><published>2017-11-12T21:07:00+08:00</published><updated>2017-11-12T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-11-12:/40523135_cadp_finalproject/blog/2017-fall-cadp-w9.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第九周（學習onshape的視頻）&lt;/p&gt;
+&lt;p&gt;而且每周四的晚上7.30到9.30在電腦輔助設計教室會有助教幫忙解決問題。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計個人ONSHAPE分配任務第9周任務</title><link href="./2017-fall-cadp-w9.html" rel="alternate"></link><published>2017-11-12T21:07:00+08:00</published><updated>2017-11-12T21:07:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-11-12:./2017-fall-cadp-w9.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第九周（學習onshape的視頻）&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第九周（學習onshape的視頻）&lt;/p&gt;
 
 
@@ -95,7 +648,7 @@ soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://
 
 &lt;p&gt;2.文件導入
 點擊導入按鈕，選擇你要導入的文件然後點擊上傳，再選擇尺寸就好了&lt;/p&gt;
-&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/0CNGD7ENZKo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第八週學習心得</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w8-1.html" rel="alternate"></link><published>2017-11-06T17:42:00+08:00</published><updated>2017-11-06T17:42:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-11-06:/40523135_cadp_finalproject/blog/2017-fall-cadp-w8-1.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第八週期中总结&lt;/p&gt;
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/0CNGD7ENZKo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen&gt;&lt;/iframe&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第八週學習心得</title><link href="./2017-fall-cadp-w8-1.html" rel="alternate"></link><published>2017-11-06T17:42:00+08:00</published><updated>2017-11-06T17:42:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-11-06:./2017-fall-cadp-w8-1.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第八週期中总结&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第八週期中总结&lt;/p&gt;
 
 
@@ -111,7 +664,7 @@ soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://
 &lt;p&gt;期中自评根据
    fossil网志[https://cadpa.kmol.info/40523135/doc/trunk/blog/]
    onshape上组装的组件[https://cad.onshape.com/documents/65744a6e2b32184e98c3065f/w/509279665cf45df99d561001/e/53112a729705d889b13834ac]
-   youtube的影片[https://www.youtube.com/channel/UCHh3rZnx8q6607BBAAGF_DQ?view_as=subscriber]&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第七週學習心得</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w7-2.html" rel="alternate"></link><published>2017-10-26T04:18:00+08:00</published><updated>2017-10-26T04:18:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-10-26:/40523135_cadp_finalproject/blog/2017-fall-cadp-w7-2.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第七週學習心得&lt;/p&gt;
+   youtube的影片[https://www.youtube.com/channel/UCHh3rZnx8q6607BBAAGF_DQ?view_as=subscriber]&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 電腦輔助設計實習第七週學習心得</title><link href="./2017-fall-cadp-w7-2.html" rel="alternate"></link><published>2017-10-26T04:18:00+08:00</published><updated>2017-10-26T04:18:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-10-26:./2017-fall-cadp-w7-2.html</id><summary type="html">&lt;p&gt;電腦輔助設計實習第七週學習心得&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;電腦輔助設計實習第七週學習心得&lt;/p&gt;
 
 
@@ -137,7 +690,7 @@ soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://
 &lt;p&gt;期中自评根据
    fossil网志[https://cadpa.kmol.info/40523135/doc/trunk/blog/]
    onshape上组装的组件[https://cad.onshape.com/documents/65744a6e2b32184e98c3065f/w/509279665cf45df99d561001/e/53112a729705d889b13834ac]
-   youtube的影片[https://www.youtube.com/channel/UCHh3rZnx8q6607BBAAGF_DQ?view_as=subscriber]&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第6週上课内容</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w7.html" rel="alternate"></link><published>2017-10-19T03:43:00+08:00</published><updated>2017-10-19T03:43:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-10-19:/40523135_cadp_finalproject/blog/2017-fall-cadp-w7.html</id><summary type="html">&lt;p&gt;2017fall cadpa w6 第6周课程网网志&lt;/p&gt;
+   youtube的影片[https://www.youtube.com/channel/UCHh3rZnx8q6607BBAAGF_DQ?view_as=subscriber]&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第6週上课内容</title><link href="./2017-fall-cadp-w7.html" rel="alternate"></link><published>2017-10-19T03:43:00+08:00</published><updated>2017-10-19T03:43:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-10-19:./2017-fall-cadp-w7.html</id><summary type="html">&lt;p&gt;2017fall cadpa w6 第6周课程网网志&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;2017fall cadpa w6 第6周课程网网志&lt;/p&gt;
 
 
@@ -156,7 +709,7 @@ soildworks初步效果的視頻&lt;iframe width="560" height="315" src="https://
 &lt;iframe src="./../data/stlviewer/viewstl.html?src=./../project-1/connection.stl" width="800" height="600"&gt;&lt;/iframe&gt;
 &lt;iframe src="./../data/stlviewer/viewstl.html?src=./../project-1/handle.stl" width="800" height="600"&gt;&lt;/iframe&gt;&lt;/p&gt;
 &lt;h3&gt;回去以后的工作：试着将零件组合 还有在onshape上绘图&lt;/h3&gt;
-&lt;h3&gt;如果想要字体大一点的话可以在leo档中文字的前面加三个英文减号&lt;/h3&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第6週</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w6.html" rel="alternate"></link><published>2017-10-15T10:46:00+08:00</published><updated>2017-10-15T10:46:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-10-15:/40523135_cadp_finalproject/blog/2017-fall-cadp-w6.html</id><summary type="html">&lt;p&gt;2017fall cadpa w 第6周课程网网志&lt;/p&gt;
+&lt;h3&gt;如果想要字体大一点的话可以在leo档中文字的前面加三个英文减号&lt;/h3&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第6週</title><link href="./2017-fall-cadp-w6.html" rel="alternate"></link><published>2017-10-15T10:46:00+08:00</published><updated>2017-10-15T10:46:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-10-15:./2017-fall-cadp-w6.html</id><summary type="html">&lt;p&gt;2017fall cadpa w 第6周课程网网志&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;2017fall cadpa w 第6周课程网网志&lt;/p&gt;
 
 
@@ -192,7 +745,7 @@ connection的STL档
 handle的绘图影片
 &lt;iframe width="560" height="315" src="https://www.youtube.com/embed/O_v0sCc705E" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;
 handle的STL档
-&lt;iframe src="./../data/stlviewer/viewstl.html?src=./../project/handle.stl" width="800" height="600"&gt;&lt;/iframe&gt;&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第5週</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w5.html" rel="alternate"></link><published>2017-10-12T01:45:00+08:00</published><updated>2017-10-12T01:45:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-10-12:/40523135_cadp_finalproject/blog/2017-fall-cadp-w5.html</id><summary type="html">&lt;p&gt;2017fall cadpa w5 第五周课程网网志&lt;/p&gt;
+&lt;iframe src="./../data/stlviewer/viewstl.html?src=./../project/handle.stl" width="800" height="600"&gt;&lt;/iframe&gt;&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第5週</title><link href="./2017-fall-cadp-w5.html" rel="alternate"></link><published>2017-10-12T01:45:00+08:00</published><updated>2017-10-12T01:45:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-10-12:./2017-fall-cadp-w5.html</id><summary type="html">&lt;p&gt;2017fall cadpa w5 第五周课程网网志&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;2017fall cadpa w5 第五周课程网网志&lt;/p&gt;
 
 
@@ -202,7 +755,7 @@ handle的STL档
 是fossil fossil可以让组员连接主机并对数据进行更改。当有了仓储以后组员就要用电脑绘图程式
 来绘出组件的3d模型。可以用solvespace 来绘图 solvespace的优势是软件小 使用方便也可以绘出想要的文件
 组件画好以后转成.stl格式然后放入V-rep来模拟小球在组件上的运动情况。
-当模拟成功后加以改进就可以进行实体的组件制作。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第4週</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w4.html" rel="alternate"></link><published>2017-10-05T01:47:00+08:00</published><updated>2017-10-05T01:47:00+08:00</updated><author><name>40523135</name></author><id>tag:s40523135.github.io,2017-10-05:/40523135_cadp_finalproject/blog/2017-fall-cadp-w4.html</id><summary type="html">&lt;p&gt;2017fall cadpa w4 第四周课程网网志&lt;/p&gt;
+当模拟成功后加以改进就可以进行实体的组件制作。&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第4週</title><link href="./2017-fall-cadp-w4.html" rel="alternate"></link><published>2017-10-05T01:47:00+08:00</published><updated>2017-10-05T01:47:00+08:00</updated><author><name>40523135</name></author><id>tag:None,2017-10-05:./2017-fall-cadp-w4.html</id><summary type="html">&lt;p&gt;2017fall cadpa w4 第四周课程网网志&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;2017fall cadpa w4 第四周课程网网志&lt;/p&gt;
 
 
@@ -210,7 +763,7 @@ handle的STL档
 &lt;p&gt;1.遇到的问题是我的网志上传之后点开blog 连接不上我自己的主机所以是远端网址错误导致的
 &lt;img src="./data/images/1.png"width="560" height="315"&gt;&lt;/img&gt;
 把主机改成cadpa 2017fall改为学号40523135
-2.主要的目的是使用 solvespace v-rep绘图&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第二週</title><link href="https://s40523135.github.io/40523135_cadp_finalproject/blog/2017-fall-cadp-w2.html" rel="alternate"></link><published>2017-09-20T11:00:00+08:00</published><updated>2017-09-20T11:00:00+08:00</updated><author><name>yen</name></author><id>tag:s40523135.github.io,2017-09-20:/40523135_cadp_finalproject/blog/2017-fall-cadp-w2.html</id><summary type="html">&lt;p&gt;本學期起各班透過一台 Ubuntu 16.04 主機, 建立 Fossil SCM 伺服器, 且每一學員發放一個 Fossil SCM 倉儲, 其中各學員可以利用 Wiki 與 Technote 紀錄學習資料外, 還可以將靜態網誌與簡報檔案放入 Files 資料區.&lt;/p&gt;
+2.主要的目的是使用 solvespace v-rep绘图&lt;/p&gt;</content><category term="2017fall"></category><category term="CADPa"></category></entry><entry><title>2017 Fall CADP 第二週</title><link href="./2017-fall-cadp-w2.html" rel="alternate"></link><published>2017-09-20T11:00:00+08:00</published><updated>2017-09-20T11:00:00+08:00</updated><author><name>yen</name></author><id>tag:None,2017-09-20:./2017-fall-cadp-w2.html</id><summary type="html">&lt;p&gt;本學期起各班透過一台 Ubuntu 16.04 主機, 建立 Fossil SCM 伺服器, 且每一學員發放一個 Fossil SCM 倉儲, 其中各學員可以利用 Wiki 與 Technote 紀錄學習資料外, 還可以將靜態網誌與簡報檔案放入 Files 資料區.&lt;/p&gt;
 </summary><content type="html">&lt;p&gt;本學期起各班透過一台 Ubuntu 16.04 主機, 建立 Fossil SCM 伺服器, 且每一學員發放一個 Fossil SCM 倉儲, 其中各學員可以利用 Wiki 與 Technote 紀錄學習資料外, 還可以將靜態網誌與簡報檔案放入 Files 資料區.&lt;/p&gt;
 
 
